@@ -18,3 +18,20 @@ class UserSignup(BaseModel):
             # Join all in one and raise one ValueError (v2 limitation workaround)
             raise ValueError(", ".join(errors))
         return values
+    
+
+# Add this new class for login
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+    @root_validator(pre=True)
+    def login_fields_mandatory(cls, values):
+        required_fields = ['email', 'password']
+        errors = []
+        for field in required_fields:
+            if field not in values or not values[field]:
+                errors.append(f"{field.replace('_', ' ').capitalize()} is required")
+        if errors:
+            raise ValueError(", ".join(errors))
+        return values    

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
-from app.schemas.user import UserSignup
-from app.controllers.user_controller import register_user
+from app.schemas.user import UserSignup,UserLogin
+from app.controllers.user_controller import register_user,login_user
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
@@ -13,6 +13,13 @@ async def register(user: UserSignup):
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
+
+@router.post("/login")
+async def login(user: UserLogin):
+    result = await login_user(user)
+    if "error" in result:
+        raise HTTPException(status_code=401, detail=result["error"])
+    return result
 
 
 
