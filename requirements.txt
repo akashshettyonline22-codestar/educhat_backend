@@ -9,5 +9,18 @@ pydantic
 python-jose[cryptography]
 python-multipart
 python-dotenv
+PyPDF2 
+pdfplumber
+pytesseract 
+pillow 
+pdf2image 
+opencv-python
+easyocr
+sentence-transformers 
+faiss-cpu
+numpy
+PyMuPDF
+openai 
+Pillow
 
 
