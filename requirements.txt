@@ -21,6 +21,11 @@ faiss-cpu
 numpy
 PyMuPDF
 openai 
-Pillow
+diffusers 
+transformers 
+accelerate 
+torch 
+torchvision 
+requests 
 
 

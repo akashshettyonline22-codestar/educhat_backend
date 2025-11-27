@@ -13,7 +13,9 @@ app = FastAPI()
 
 security = HTTPBearer()
 # Add CORS middleware - ADD THIS SECTION
-origins = ["*"]
+origins = ["http://localhost:5173"]
+
+app.add_middleware(JWTAuthMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(JWTAuthMiddleware)
+
 
 @app.exception_handler(RequestValidationError)
 async def custom_validation_exception_handler(request, exc):

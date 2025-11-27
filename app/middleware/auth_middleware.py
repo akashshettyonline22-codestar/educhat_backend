@@ -19,12 +19,15 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         # Skip authentication for public paths
+        print("inside middleware")
         if request.url.path in self.public_paths:
             response = await call_next(request)
             return response
         
         # Check for Authorization header
+        print(request.body)
         auth_header = request.headers.get("Authorization")
+        print(f"Authorization header: {auth_header}")
         
         if not auth_header:
             return JSONResponse(

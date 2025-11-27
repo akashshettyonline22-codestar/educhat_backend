@@ -92,7 +92,6 @@ def process_chunks_to_vectors(user_email: str, textbook_id: str, chunks: List[di
 def search_similar_chunks(user_email: str, textbook_id: str, query: str, top_k: int = 5) -> List[Tuple[str, float]]:
     """Search for similar chunks in student's textbook"""
     try:
-        print("helloo")
         # Create safe filename
         safe_email = user_email.replace("@", "_").replace(".", "_")
         safe_filename = f"{safe_email}_{textbook_id}"

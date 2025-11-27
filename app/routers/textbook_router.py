@@ -8,6 +8,7 @@ import os
 import uuid
 from datetime import datetime
 from app.utils.vector_processor import process_chunks_to_vectors
+from app.utils.textbook_validator import validate_textbook
 
 
 
@@ -26,7 +27,9 @@ async def upload_textbook(
     token: str = Depends(security)
 ):
     # Get current user from middleware
+    print("textbook")
     user_email = request.state.current_user_email
+
     
     # Basic validation
     if not name or not subject or not grade:
@@ -63,6 +66,15 @@ async def upload_textbook(
         print("Extracting text from PDF...")
         extraction_result = extract_text_hybrid(content)
         extracted_text = extraction_result["combined_text"]
+
+        validation = validate_textbook(extracted_text, subject, grade)
+    
+        if not validation["valid"]:
+            return {
+                "success": False,
+                "error": validation["message"],
+                "validation": validation
+            }
         
         if not extracted_text or len(extracted_text.strip()) < 50:
             raise HTTPException(status_code=400, detail="Could not extract meaningful text from PDF")
@@ -138,6 +150,7 @@ async def upload_textbook(
         result = {
             "message": "Textbook uploaded and processed successfully!",
             "textbook_id": textbook_id,
+            "success": True,
             "data": {
                 "name": name,
                 "subject": subject,
