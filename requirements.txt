@@ -27,5 +27,6 @@ accelerate
 torch 
 torchvision 
 requests 
+python-socketio
 
 

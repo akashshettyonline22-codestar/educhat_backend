@@ -14,10 +14,15 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
             "/openapi.json", 
             "/redoc",
             "/register", 
-            "/login"
+            "/login",
+            "/qa/images"
         ]
 
     async def dispatch(self, request: Request, call_next):
+        if request.url.path.startswith("/qa/images"):
+           print("hello")
+           response= await call_next(request)
+           return response
         # Skip authentication for public paths
         print("inside middleware")
         if request.url.path in self.public_paths:
@@ -62,3 +67,33 @@ class JWTAuthMiddleware(BaseHTTPMiddleware):
         # Continue to the endpoint
         response = await call_next(request)
         return response
+
+def decode_token_simple(token: str) -> str or None:
+        """
+        Decode JWT token and extract email (returns None on error)
+        Use this for Socket.IO where you can't raise HTTPException
+        
+        Args:
+            token (str): JWT token string
+        
+        Returns:
+            str or None: User email if valid, None if invalid
+        """
+        try:
+            # Remove 'Bearer ' prefix if present
+            if token.startswith("Bearer "):
+                token = token.split(" ")[1]
+            
+            # Verify token
+            payload = verify_token(token)
+            
+            if not payload:
+                return None
+            
+            # Extract email
+            email = payload.get("email") or payload.get("sub")
+            return email
+            
+        except Exception as e:
+            print(f"❌ Token decode error: {e}")
+            return None

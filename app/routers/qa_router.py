@@ -719,6 +719,7 @@ def generate_multimodal_response_with_context(question: str, textbook_context: s
                             - Be conversational and encouraging like a real teacher
                             - Keep responses helpful but concise (2-3 paragraphs max)
                             - Reference specific visual elements from the page when relevant
+                            - Reply with just answer
                             
                             Answer the student's question in a warm, supportive way.
                             """

@@ -157,3 +157,32 @@ def get_textbook_vector_info(user_email: str, textbook_id: str) -> dict:
         print(f"Error reading vector info: {e}")
     
     return info
+
+def delete_textbook_vectors(user_email: str, textbook_id: str) -> bool:
+    """Delete FAISS index and chunks for a textbook"""
+    try:
+        safe_email = user_email.replace("@", "_").replace(".", "_")
+        safe_filename = f"{safe_email}_{textbook_id}"
+        
+        index_path = f"data/indexes/{safe_filename}.index"
+        chunks_path = f"data/chunks/{safe_filename}.pkl"
+        
+        deleted = False
+        
+        # Delete FAISS index file
+        if os.path.exists(index_path):
+            os.remove(index_path)
+            print(f"🗑️ Deleted index: {index_path}")
+            deleted = True
+        
+        # Delete chunks pickle file
+        if os.path.exists(chunks_path):
+            os.remove(chunks_path)
+            print(f"🗑️ Deleted chunks: {chunks_path}")
+            deleted = True
+        
+        return deleted
+        
+    except Exception as e:
+        print(f"❌ Error deleting vectors: {e}")
+        return False
