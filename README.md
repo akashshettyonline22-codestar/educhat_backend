@@ -55,173 +55,156 @@ Session Management: Separate conversations per topic
 
 🏗️ System Architecture
 
-┌─────────────────────────────────────────────────────────────┐
-│                        FRONTEND                              │
-│              (React/Vue/Your UI Framework)                   │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ REST API (JWT Auth)
-                       ↓
-┌─────────────────────────────────────────────────────────────┐
-│                     FASTAPI BACKEND                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Auth Router  │  │Textbook      │  │  QA Router   │      │
-│  │ /register    │  │ Router       │  │  /qa/ask     │      │
-│  │ /login       │  │ /upload      │  │              │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│  ┌──────────────┐  ┌──────────────┐                         │
-│  │ Bots Router  │  │ Analytics    │                         │
-│  │ /bots/       │  │ Router       │                         │
-│  └──────────────┘  └──────────────┘                         │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-        ┌──────────────┼──────────────┐
-        ↓              ↓               ↓
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│   MongoDB    │ │    FAISS     │ │  File System │
-│              │ │              │ │              │
-│ • Users      │ │ • Vector     │ │ • PDF Files  │
-│ • Chunks     │ │   Indexes    │ │ • Images     │
-│ • Sessions   │ │ • Embeddings │ │              │
-│ • Messages   │ │              │ │              │
-└──────────────┘ └──────────────┘ └──────────────┘
-        │
-        └───────────────┐
-                        ↓
-                ┌──────────────┐
-                │  External    │
-                │    APIs      │
-                │              │
-                │ • OpenAI     │
-                │ • Hugging    │
-                │   Face       │
-                └──────────────┘
+graph TB
+    subgraph Client["Client Layer"]
+        A[Web App<br/>React/Vue]
+        B[Mobile App<br/>Future]
+    end
+    
+    subgraph API["API Gateway Layer"]
+        C[FastAPI Server]
+        D[CORS Middleware]
+        E[JWT Auth]
+    end
+    
+    subgraph App["Application Layer"]
+        F[Auth Router]
+        G[Textbook Router]
+        H[Q&A Router]
+        I[Bots Router]
+        J[Analytics Router]
+    end
+    
+    subgraph Logic["Business Logic Layer"]
+        K[PDF Processor]
+        L[Vector Search<br/>FAISS]
+        M[Chat Manager]
+        N[Image Generator<br/>Hugging Face]
+        O[Validator<br/>GPT-4]
+    end
+    
+    subgraph Storage["Storage Layer"]
+        P[(MongoDB)]
+        Q[FAISS Indexes]
+        R[File System<br/>PDFs & Images]
+    end
+    
+    subgraph External["External Services"]
+        S[OpenAI API<br/>GPT-4 Vision]
+        T[Hugging Face<br/>FLUX Model]
+    end
+    
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    E --> G
+    E --> H
+    E --> I
+    E --> J
+    
+    G --> K
+    G --> O
+    H --> L
+    H --> M
+    H --> N
+    
+    K --> P
+    L --> Q
+    M --> P
+    N --> R
+    O --> S
+    N --> T
+    
+    style Client fill:#e1f5ff
+    style API fill:#fff3e0
+    style App fill:#f3e5f5
+    style Logic fill:#e8f5e9
+    style Storage fill:#fff9c4
+    style External fill:#ffebee
+
 
 📊 Textbook Upload Workflow
+sequenceDiagram
+    participant U as User
+    participant API as FastAPI
+    participant PDF as PDF Processor
+    participant VAL as Validator GPT
+    participant CHUNK as Chunker
+    participant VEC as Vector Engine
+    participant DB as MongoDB
+    participant FAISS as FAISS Index
 
-┌─────────────────────────────────────────────────────┐
-│         STEP 1: File Upload                         │
-│  User uploads PDF + metadata (subject, grade)       │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│         STEP 2: Text Extraction (Hybrid)            │
-│  ┌──────────────┐      ┌──────────────┐            │
-│  │  PDFPlumber  │  +   │  OCR         │            │
-│  │  (Digital)   │      │  (Scanned)   │            │
-│  └──────┬───────┘      └──────┬───────┘            │
-│         └──────────┬───────────┘                    │
-│                    ↓                                │
-│         Combined Clean Text                         │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│         STEP 3: Content Validation (GPT-4)          │
-│  • Check subject match (Math vs Science)            │
-│  • Verify grade level (5 vs 8)                      │
-│  • Confidence score > 60%                           │
-│                                                     │
-│  ✅ PASS → Continue  |  ❌ FAIL → Reject            │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│         STEP 4: Smart Chunking                      │
-│  • 1000-word chunks                                 │
-│  • 150-word overlap                                 │
-│  • Preserve page numbers                            │
-│  Result: ~50-200 chunks                             │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│         STEP 5: Vector Embeddings (FAISS)           │
-│  Each chunk → 384-dim vector                        │
-│  Model: all-MiniLM-L6-v2                           │
-│  Storage: data/indexes/ + data/chunks/              │
-└────────────────┬────────────────────────────────────┘
-                 ↓
-┌─────────────────────────────────────────────────────┐
-│         STEP 6: Storage                             │
-│  • MongoDB: chunks, metadata                        │
-│  • FAISS: vector index                              │
-│  • File: original PDF                               │
-│                                                     │
-│  ✅ Ready for Q&A                                   │
-└─────────────────────────────────────────────────────┘
+    U->>API: Upload PDF + Metadata
+    API->>PDF: Extract Text (Hybrid)
+    PDF-->>API: Extracted Text
+    
+    API->>VAL: Validate Subject & Grade
+    VAL->>VAL: Check with GPT-4
+    
+    alt Validation Failed
+        VAL-->>API: ❌ Mismatch
+        API-->>U: Reject Upload
+    else Validation Passed
+        VAL-->>API: ✅ Valid
+        API->>CHUNK: Smart Chunking
+        CHUNK-->>API: 50-200 Chunks
+        
+        API->>VEC: Generate Embeddings
+        VEC->>VEC: SentenceTransformer
+        VEC->>FAISS: Store Vectors
+        VEC->>DB: Store Chunks
+        
+        FAISS-->>API: Index Created
+        DB-->>API: Chunks Saved
+        API-->>U: ✅ Upload Success
+    end
+
 
 💬 Chat Flow with Multimodal AI
 
-Student Question: "What are rolling objects?"
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  1. Save User Message → MongoDB                     │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  2. Retrieve Conversation History (last 8 msgs)     │
-│     Build Context for Follow-up Detection           │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  3. Enhanced Context Search                         │
-│     • Is follow-up? Extract keywords from history   │
-│     • Search FAISS: "rolling objects [context]"     │
-│     • Find: "Page 12 about rolling objects"         │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  4. Extract Page 12 Screenshot (PyMuPDF)            │
-│     • Render at 2x resolution                       │
-│     • Convert to base64 PNG                         │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  5. Send to GPT-4 Vision                            │
-│     Inputs:                                         │
-│     • Text: "Rolling objects are shapes..."         │
-│     • Image: [Page 12 screenshot]                   │
-│     • Context: Previous conversation                │
-│                                                     │
-│     GPT Response:                                   │
-│     "Looking at page 12, I see a ball,              │
-│      cylinder, and cube. The ball and               │
-│      cylinder roll because..."                      │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  6. Check: Should Generate Educational Image?       │
-│     • Contains visual keywords? ✓ (rolling)         │
-│     • Generate prompt with GPT                      │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  7. Hugging Face Image Generation (FREE)            │
-│     Prompt: "Cartoon of ball rolling, cylinder      │
-│              rolling, cube not rolling..."          │
-│     Model: FLUX.1-schnell (2-5 sec)                 │
-│     Save: data/educational_images/edu_123.png       │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  8. Return Complete Response                        │
-│     {                                               │
-│       "answer": "Looking at page 12...",            │
-│       "reference_page": 12,                         │
-│       "educational_image": "/qa/images/edu_123.png" │
-│     }                                               │
-└────────────────┬────────────────────────────────────┘
-        │
-        ↓
-┌─────────────────────────────────────────────────────┐
-│  9. Save Bot Response → MongoDB                     │
-│     Update session activity                         │
-└─────────────────────────────────────────────────────┘
+flowchart TD
+    Start([Student Asks Question]) --> Session{Session<br/>Exists?}
+    
+    Session -->|No| CreateSession[Create New Session]
+    Session -->|Yes| LoadHistory[Load Conversation History]
+    
+    CreateSession --> SaveMsg[Save User Message]
+    LoadHistory --> SaveMsg
+    
+    SaveMsg --> Context[Build Context<br/>Last 8 Messages]
+    Context --> Followup{Is Follow-up<br/>Question?}
+    
+    Followup -->|Yes| Extract[Extract Keywords<br/>from History]
+    Followup -->|No| DirectSearch[Direct Search]
+    
+    Extract --> EnhancedSearch[Enhanced Search<br/>Question + Context]
+    DirectSearch --> EnhancedSearch
+    
+    EnhancedSearch --> FAISS[FAISS Vector Search]
+    FAISS --> Results{Found<br/>Results?}
+    
+    Results -->|No| OutOfContext[Out of Context Response]
+    Results -->|Yes| ExtractPage[Extract Page Screenshot]
+    
+    ExtractPage --> GPT4[Send to GPT-4 Vision<br/>Text + Image + Context]
+    GPT4 --> CheckVisual{Visual<br/>Concept?}
+    
+    CheckVisual -->|Yes| GenImage[Generate Educational Image<br/>Hugging Face FLUX]
+    CheckVisual -->|No| Response[Assemble Response]
+    
+    GenImage --> Response
+    Response --> SaveBot[Save Bot Response]
+    SaveBot --> End([Return to User])
+    OutOfContext --> End
+    
+    style Start fill:#4caf50,color:#fff
+    style End fill:#2196f3,color:#fff
+    style FAISS fill:#ff9800,color:#fff
+    style GPT4 fill:#9c27b0,color:#fff
+    style GenImage fill:#e91e63,color:#fff
+
 
 
 🚀 Quick Start
@@ -270,44 +253,55 @@ Student Question: "What are rolling objects?"
 
 📁 Project Structure
 
-   educhat/
-│
-├── app/
-│   ├── routers/
-│   │   ├── auth_router.py          # User registration & login
-│   │   ├── textbook_router.py      # Textbook upload & management
-│   │   ├── qa_router.py            # Q&A chatbot endpoints
-│   │   ├── bots_router.py          # Bot listing & deletion
-│   │   └── analytics_router.py     # Dashboard analytics
-│   │
-│   ├── models/
-│   │   ├── chat_schemas.py         # Pydantic models for chat
-│   │   ├── chat_database.py        # Chat MongoDB operations
-│   │   ├── textbook_schemas.py     # Textbook models
-│   │   └── chunk_model.py          # Chunk operations
-│   │
-│   ├── utils/
-│   │   ├── pdf_processor.py        # PDF text extraction
-│   │   ├── vector_processor.py     # FAISS embeddings
-│   │   └── textbook_validator.py   # Content validation
-│   │
-│   ├── middleware/
-│   │   └── auth_middleware.py      # JWT authentication
-│   │
-│   ├── auth_utils.py               # JWT helper functions
-│   └── database.py                 # MongoDB connection
-│
-├── data/
-│   ├── indexes/                    # FAISS vector indexes
-│   ├── chunks/                     # Chunk text mappings
-│   └── educational_images/         # Generated images
-│
-├── uploads/                        # User-uploaded PDFs
-│
-├── main.py                         # FastAPI application
-├── requirements.txt                # Python dependencies
-├── .env                            # Environment variables
-└── README.md                       # This file
+ 
+---
+
+### 📝 File Descriptions
+
+#### **Core Application (`app/`)**
+
+| File/Directory | Purpose |
+|----------------|---------|
+| `routers/` | API endpoint handlers organized by feature |
+| `models/` | Pydantic schemas and database operations |
+| `utils/` | Helper functions for PDF, vectors, validation |
+| `middleware/` | Custom FastAPI middleware (auth, logging) |
+| `auth_utils.py` | JWT token creation and verification |
+| `database.py` | MongoDB connection and initialization |
+
+#### **API Routers**
+
+| Router | Endpoints | Description |
+|--------|-----------|-------------|
+| `auth_router.py` | `/register`, `/login` | User authentication |
+| `textbook_router.py` | `/textbooks/upload`, `/textbooks/list` | Textbook management |
+| `qa_router.py` | `/qa/ask`, `/qa/images/{filename}` | Chatbot Q&A |
+| `bots_router.py` | `/bots/`, `/bots/{id}` | Bot management |
+| `analytics_router.py` | `/analytics/` | Dashboard statistics |
+
+#### **Data Storage**
+
+| Directory | Contents | Purpose |
+|-----------|----------|---------|
+| `data/indexes/` | `*.index` files | FAISS vector embeddings |
+| `data/chunks/` | `*.pkl` files | Chunk text mappings |
+| `data/educational_images/` | `*.png` files | AI-generated educational images |
+| `uploads/` | `*.pdf` files | Original textbook PDFs |
+
+#### **Configuration Files**
+
+| File | Purpose |
+|------|---------|
+| `main.py` | FastAPI app setup, CORS, middleware |
+| `requirements.txt` | Python package dependencies |
+| `.env` | Environment variables (secrets) |
+| `.gitignore` | Files to exclude from git |
+| `README.md` | Project documentation |
+
+---
+
+### 🗄️ Database Collections (MongoDB)
+
 
 
 🔌 API Endpoints
